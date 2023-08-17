@@ -1,0 +1,40 @@
+\section{Exercises}
+\begin{exercise}
+for the same generative model and a new fixed $x_{n+1}$ what is the expected loss $\mathbb{E}_y[(\hat{\theta}^Tx_{n+1}-y_{n+1})^2]$? Can you interpret the quantities?
+\end{exercise}
+\begin{proof}
+\begin{align*}
+    \mathbb{E}_y[(\hat{\theta}^Tx_{n+1}-y_{n+1})]
+    &=(\hat{\theta}^Tx_{n+1})^2-2\hat{\theta}^Tx_{n+1}\mathbb{E}_y[y_{n+1}]+\mathbb{E}[y_{n+1}^2] \\
+    &=(\hat{\theta}^Tx_{n+1})^2-2\hat{\theta}^Tx_{n+1}\theta_{*}^Tx_{n+1}+(\theta_{*}^Tx_{n+1})^2 \\
+    &=([\hat{\theta}^T-\theta_{*}^T]x_{n+1})^2\\
+    &=([Y^TX(X^TX)^{\dag}-\theta_{*}^T]x_{n+1})^2\\
+    &=([(\theta_{*}^TX^T+V^T)X(X^TX)^{\dag}-\theta_{*}^T]x_{n+1})^2\\
+    &=(V^TX(X^TX)^{\dag}x_{n+1})^2
+\end{align*}
+so the expected loss is the squared error in our estimate at $x_{n+1}$, without considering the underlying noise.
+\end{proof}
+
+\subsection{Exercise}\label{sec:exercise}
+For the same generative model and a new fixed $x_{n+1}$, what is the expected loss $\mathop{{}\mathbb{E}}_{y}[(\hat{\theta}^{T}x_{n+1} - y_{n+1})^{2}]$? Can we interpret these quantities.
+\begin{align*} 
+\mathop{{}\mathbb{E}}_{y}[(\hat{\theta}^{T}x_{n+1} - y_{n+1})^{2}] \\
+= \mathop{{}\mathbb{E}}_{vi}[(\hat{\theta} - \theta_{*})^{T}x_{n+1} + v_{i})^{2}] \\ 
+= \mathop{{}\mathbb{E}}_{vi}[(\hat{\theta} - \theta_{*})^{T}x_{n+1}] + (\mathop{{}\mathbb{E}}_{vi}[v_{i}^{2}]) \\ 
+= ((\hat{\theta} - \theta_{*})^{2} + var(v_{i}) + (\mathop{{}\mathbb{E}}_{vi}[v_{i}])^{2} \\ 
+= ((\hat{\theta} - \theta_{*})^{2} + \sigma^{2}
+\end{align*}
+These 2 terms can be interpreted as the bias squared (left term) and some irreducible error/noise (right term).
+\smallbreak
+In the \textit{random design} setting, we take each $x_{i}$ to be drawn i.i.d from $\mathcal{N}$($0$, $\Sigma$) and assume that $v_{i}$ is also Gaussian. The risk is then $R(\theta) = \mathbb{E}_{x,y}[(x^{T}\theta - y)^{2}]$. What is the excess risk of $\hat{\theta}$ in terms of $X^{T}X$ and $\Sigma$? What is the excess risk in terms of $\sigma^{2}, n, d$?
+\begin{align*} 
+\mathop{{}\mathbb{E}}[R(\hat{\theta}] - R^{*} &= \mathop{{}\mathbb{E}}||(X^{T}X)^{-1}X^{T}v||_{2}^{2} \\
+&= \frac{1}{n}\mathop{{}\mathbb{E}}[v^{T}X(X^{T}X)^{-1}X^{T}X(X^{T}X)^{-1}X^{T}v] \\
+&= \frac{1}{n}\mathop{{}\mathbb{E}}[v^{T}X(X^{T}X)^{-1}X^{T}v] \\ 
+&= \frac{1}{n}\mathop{{}\mathbb{E}}[v^{T}Pv] \text{, where } P = X(X^{T}X)^{-1}X^{T} \\
+&= \frac{1}{n}\mathop{{}\mathbb{E}}[tr(Pvv^{T})] \\
+&= \frac{\sigma^{2}}{n}tr(P) \\
+&= \frac{\sigma^{2}d}{n}
+\end{align*}
+
+
