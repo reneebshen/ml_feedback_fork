@@ -13,6 +13,7 @@ We use a simplified scoring scheme for assignments (inspired by 6120 and 6110):
 - 1 star: you complete the assignment reasonably well, whether everything is perfect or you have lots of mistakes.
 - 2 stars: you do something surprisingly awesome. This is uncommon.
 - no stars: your assignment has major gaps or significant misunderstanding. This is also uncommon.
+
 Earning a gold star on every assignment achieves an A grade in the assignments category.
 
 ## Submitting your assignment
