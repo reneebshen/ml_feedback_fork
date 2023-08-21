@@ -49,7 +49,7 @@ In a traditional supervised learning setting, a model is trained by sampling dat
 \end{marginfigure}
 
 We are now dealing with a framework for which we do not have a fixed set of data points drawn i.i.d from a fixed distribution. Our data points are collected progressively over time and we want to constantly be able to make predictions based on the information that we have gathered so far. 
-At each time step t, we get a feature vector $x_t$, we make a prediction of its label $\hat{y}_t$, we then receive the true label $y_t$, which we use to calculate how erroneous our prediction function is and use that information to update our model $f_t$.
+At each time step t, we get a feature vector $x_t$, we make a prediction of its label $\hat{y}_t$, we then receive the true label $y_t$, which we use to calculate how erroneous our prediction function is and use that information to update our model $p_t$.
 
 \subsection*{Contextual bandits}
     

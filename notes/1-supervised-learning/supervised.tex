@@ -18,13 +18,13 @@ The goal of supervised learning can be formalized as a risk minimization problem
 Given some user defined loss function $\ell$, the goal in risk minimization is 
 
 \begin{equation}
-\min_{f \in \mathcal{F}} \mathcal{R}(f) = \mathbb{E}_{x, y \sim \mathcal{D}} [\ell(y, f(x))]
+\min_{p \in \mathcal{P}} \mathcal{R}(p) = \mathbb{E}_{x, y \sim \mathcal{D}} [\ell(y, p(x))]
 \end{equation}
 
-where $\mathcal{D}$ is a dataset and $\mathcal{F}$ is the set of candidate models. When we approximate $\mathbb{E}_{\mathcal{D}}$ with an actual dataset and evaluate $R$ over real data points then this becomes empirical risk minimization.
+where $\mathcal{D}$ is a dataset and $\mathcal{P}$ is the set of candidate models. When we approximate $\mathbb{E}_{\mathcal{D}}$ with an actual dataset and evaluate $R$ over real data points then this becomes empirical risk minimization.
 The process of supervised machine learning can thus be encapsulated in two things: defining a loss, and conducting risk minimization. 
 
-\section{Loss Functions}
+\section{Predictions and Errors}
 A loss function $\ell(y, \hat{y})$ measures the loss when a model predicts $\hat{y}$ when the true label is $y$; this function varies on the setting and desired characteristics of the learning algorithm.  
 
 \begin{table}[ht] 
@@ -52,9 +52,9 @@ A loss function $\ell(y, \hat{y})$ measures the loss when a model predicts $\hat
     \toprule
     Classification Loss & Usage \\
     \midrule
-    \textbf{Mean Absolute Error} $\left|f\left(\mathbf{x}_{i}\right)-y_{i}\right|$ & Estimates median label: this loss function is convex and less sensitive to noise but it isn't differentiable at 0. \\
+    \textbf{Mean Absolute Error} $\left|\hat y-y\right|$ & Estimates median label: this loss function is convex and less sensitive to noise but it isn't differentiable at 0. \\
     \textbf{Squared Loss} $\begin{aligned}
-&\left(f\left(\mathbf{x}_{i}\right)-y_{i}\right)^{2} 
+&\left(\hat y - y\right)^{2} 
 \end{aligned}$ & Estimates mean label: this loss function is convex and differentiable everywhere, but it's sensitive to outliers and noise. \\
     \bottomrule
   \end{tabular}
@@ -67,115 +67,29 @@ A loss function $\ell(y, \hat{y})$ measures the loss when a model predicts $\hat
 
 %   - regression: |^y-y| MAE, (^y-y)^2 MSE both convex, square is also smooth 
 
-\section{Risk}
 
-\marginnote{Risk can be seen as a natural lens to view a model's predictive power.} 
+\marginnote{Risk can be seen as a natural lens to quantify a model's predictive power.} 
 
-As loss is a function that is highly dependent on the sample it has received, we define a new concept to better capture the robustness of a Machine Learning model. The risk of a predictor $f$ over a distribution $\mathcal{D}$ is the expected (average) loss. Risk is mathematically defined in the following way:
+The loss may vary from sample to sample. The risk of a predictor $p$ over a distribution $\mathcal{D}$ is the expected (average) loss. Risk is mathematically defined in the following way:
 
-$$\mathcal{R}(f)=\mathbb{E}_{x, y \sim \mathcal{D}}[\ell(y, f(x))].$$
-\newline 
+$$\mathcal{R}(p)=\mathbb{E}_{x, y \sim \mathcal{D}}[\ell(y, p(x))].$$
 
-\noindent
-
-\begin{claim}
-    The predictor with the lowest possible risk is: \sidenote{If we have the true distribution of labels (an entry for everyone in a population), setting a threshold/cutoff will give us the best classifier! Unfortunately, this usually isn't realistic as in the real world.}
+In supervised machine learning, we consider the best model to be the one with the lowest risk.
+The following claim describes when
+the best prediction for some feature $x$ comes from the conditional expectation of the label $y$ given $x$.
+\begin{claim}\label{claim:condition_exp}
+    The predictor with the lowest possible risk is: 
     \begin{itemize}
         \item $\mathbb{E}[Y \mid X]$ for squared loss
         \item $1\{\mathbb{E}[Y \mid X] \geq t\}$ for $0-1$ loss, with threshold $t$ depending on $\mathcal{D}$
     \end{itemize}
 \end{claim}
+If all our data were stored in a large table, we could compute the conditional expectation as follows: First, find all the entries with matching features $x_i=x$, and then average the corresponding labels $y_i$.
+In practice, we rarely have access to labelled data of the entire distribution---instead, we only have some samples. 
+Furthermore, the feature description $x$ may be so rich and high dimensional that nothing in our finite dataset exactly matches it.
+We will consider both of these issues later in this chapter.
 
 
-\begin{proof}
-
-\noindent
-  This can be proven using the tower property of expectation, also known as the law of total expectation. 
-
-\begin{fact}
-The Law of Total Expectation states that if $X$ is a random variable whose expected value $\mathbb{E}[X]$ is defined, and $Y$ is any random variable on the same probability space, then $\mathbb{E}[X] = \mathbb{E}[\mathbb{E}[X|Y]]$.
-\end{fact}
-
-\noindent
-Giving loss $\ell(f(X), Y)$ of a model on a dataset as a random variable with $X$ as another random variable in the same probability space, we can use this fact to expand:
-
-$$
-\mathbb{E}_{X, Y \sim \mathcal{D}}[\ell(f(X), Y)]=\mathbb{E}_X[\mathbb{E}_Y[\ell(f(X), Y) \mid X]]
-$$
-
-
-\newthought{For a squared loss} we can plug in $\ell(f(X), Y) = (f(X) - Y)^2$, and we may thus say that we are looking for 
-$$\hat{f} = \argmin_f \mathbb{E}_X[\mathbb{E}_Y[(f(X) - Y)^2 \mid X]]$$
-
-\noindent
-Since squared loss is convex and the minima of a convex function can be found at the point where the derivative is zero, we may find that:
-\begin{align*}
-    \frac{d}{df(X)} \mathbb{E}_X[\mathbb{E}_Y[(f(X) - Y)^2 \mid X]] &= 0 \\
-    \mathbb{E}_X[\mathbb{E}_Y[2 (\hat{f}(X) - Y) \mid X]] &= 0
-\end{align*}
-
-\noindent
-By linearity of expectation, this gives us $\hat{f}(X) = \mathbb{E}_Y[Y | X]$
-\begin{align*}
-    \mathbb{E}_X [\mathbb{E}_Y[2 (\hat{f}(X) - Y) \mid X]] &= 2 (\mathbb{E}_X [\mathbb{E}_Y[\hat{f}(X) \mid X]] - \mathbb{E}_X [\mathbb{E}_Y[Y \mid X]]) \\
-    &= 0 \\
-    \mathbb{E}_X [\mathbb{E}_Y[\hat{f}(X) \mid X]] &= \mathbb{E}_X [\mathbb{E}_Y[Y \mid X]] \\
-    \hat{f}(X) &= \mathbb{E}_X [\mathbb{E}_Y[Y \mid X]]
-\end{align*}
-
-% If we only look at the inner expectation and consider our X random variable set to a random value x, we can rewrite our f(X) as f(x) - not a random variable anymore - the variability that we are interested in here is only due to our choice of function in our minimization problem. Let's now just rename this f(x) as a variable z which varies with the function f that we will choose in our minimization problem. Our minimization problem is therefore the following:\\
-% $$\hat{z} = \argmin_{z\sim Z} \mathbb{E}_Y[(Z - Y)^2 ]$$
-
-% \noindent
-% If we take the derivative over z and find $\hat{z}$ we end up solving:
-% $$\mathbb{E}_Y[2(\hat{z} - Y) ] = 0$$
-% By linearity of expectation, we get:
-% $$\hat{z} = \mathbb{E}[Y]$$
-% Coming back to our initial problem, we were looking for the optimal predictor $\hat{f}(x)$.
-% Reinjecting x as a variable, our problem ends up being:
-% $$\hat{f}(x) = \mathbb{E}[Y \mid X]$$
-
-
-\newthought{For a 0/1 loss} we can take advantage of the fact that $f(x) \in \{0, 1\}$ to expand the inner expectation:
-
-
-$$\begin{aligned}
-&\mathbb{E}_Y[\ell(0, Y) \mid X=x]=\ell(0,0) \mathbb{P}[Y=0 \mid X=x]+\ell(0,1) \mathbb{P}[Y=1 \mid X=x] \\
-&\mathbb{E}_Y[\ell(1, Y) \mid X=x]=\ell(1,0) \mathbb{P}[Y=0 \mid X=x]+\ell(1,1) \mathbb{P}[Y=1 \mid X=x]
-\end{aligned}
-$$
-
-\noindent
-Since it is a 0/1 loss, $\ell(1,0) = \ell(1,0) = 1$ and $\ell(0,0) = \ell(1,1) = 0$ so this expansion simplifies to:
-
-$$\begin{aligned}
-&\mathbb{E}_Y[\ell(0, Y) \mid X=x]= \mathbb{P}[Y=1 \mid X=x] \\
-&\mathbb{E}_Y[\ell(1, Y) \mid X=x]=\mathbb{P}[Y=0 \mid X=x]
-\end{aligned}
-$$
-We are looking for the predictor that will always predict the smaller of these two terms for a given x (since we are trying to minimize this inner expectation for our overall risk). We want to predict $0$ if $\mathbb{P}[Y=1 \mid X=x] \leq \mathbb{P}[Y=0 \mid X=x]$ and $1$ if $\mathbb{P}[Y=1 \mid X=x] \leq \mathbb{P}[Y=0 \mid X=x]$.
-
-\noindent
-We can use this to rewrite:
-$$\hat{f}(x) = 1\{\mathbb{P}[Y=1 \mid X=x] \geq \mathbb{P}[Y=0 \mid X=x]\}$$
-
-\noindent
-From the property that $Y \in \{0, 1\}$, we can use $\mathbb{P}[Y=1 \mid X=x] + \mathbb{P}[Y=0 \mid X=x] = 1$ to simplify this expression:
-$$\hat{f}(x) = 1\{\mathbb{P}[Y=1 \mid X=x] \geq 1 - \mathbb{P}[Y=0 \mid X=x]\}$$ 
-
-\noindent
-By the definition of expectation, we simultaneously have:
-\begin{align*}
-\mathbb{E}[Y \mid X = x] &= 1*\mathbb{P}[Y=1 \mid X=x] + 0*\mathbb{P}[Y=0 \mid X=x] \\
-&= \mathbb{P}[Y=1 \mid X=x]
-\end{align*}
-Putting this all together and setting $t = 1 - \mathbb{P}[Y=0 \mid X=x]\}$ we get:
-$$\hat{f}(x) = 1\{\mathbb{E}[Y \mid X = x] \geq t \}$$
-\end{proof}
-% \textbf{Proof:} 
-
-
-\section{Prediction errors}\label{sec:prediction_errors}
 Loss determines trade-offs between errors, as some variation might be truly unexplainable or our feature set might not be complete!  An example of this might be attempting to predict whether a person in a picture is sitting or standing simply based on the position of their face in a frame.  This feature set clearly won't give us a 100\% accurate classifier. 
 
 When we classify, we might classify things correctly (predict stand for a standing person, sit for a sitting person), and here it would make sense for the loss to be 0; however, what if we predict standing for a sitting person versus sitting for a standing person?  Would we want to assign both these situations the same loss?  We must make this decision based on the motivation of building our model, and based on our priorities.  
@@ -281,15 +195,15 @@ Fairness related issues happen in non-classifier models as well, there has been 
 \section{Empirical Risk Minimization: Sample vs Population}\label{sec:sample_vs_population}
 
 Rarely do we have access to the distribution decribing and entire population; instead we must learn from some dataset. The goal of empirical risk minimization is to find 
-$$\hat{f} = \min_{f \in \mathcal{F}}\frac{1}{n} \sum_{i = 1}^{n} \ell(y_i, f(x_i))$$
+$$\hat{p} = \min_{p \in \mathcal{P}}\frac{1}{n} \sum_{i = 1}^{n} \ell(y_i, p(x_i))$$
 
-This generally states that we attempt to find the model in a model class which has the least loss over the dataset: the average loss over the training dataset is called the empirical risk and is denoted as $\mathcal{R}_N(f)$. Minimizing our risk over the training dataset is useful since we want a model which reduces the overall risk and our training set is all we have access to. 
+This generally states that we attempt to find the model in a model class which has the least loss over the dataset: the average loss over the training dataset is called the empirical risk and is denoted as $\mathcal{R}_N(p)$. Minimizing our risk over the training dataset is useful since we want a model which reduces the overall risk and our training set is all we have access to. 
 
-\begin{theorem}[Fundamental Theorem of Supervised Learning] 
-    $$\underbrace{\mathcal{R}(f)}_{risk} \leq \underbrace{\mathcal{R}_{N}(f)}_{empirical\,risk}+\underbrace{\left|\mathcal{R}(f)-\mathcal{R}_{N}(f)\right|}_{generalization\,error}$$
+\begin{thm}[Fundamental Theorem of Supervised Learning] 
+    $$\underbrace{\mathcal{R}(p)}_{risk} \leq \underbrace{\mathcal{R}_{N}(p)}_{empirical\,risk}+\underbrace{\left|\mathcal{R}(p)-\mathcal{R}_{N}(p)\right|}_{generalization\,error}$$
 
-where $\mathcal{R}_{N}$ is the empirical risk of $f$ over some dataset $\mathcal{D}$. In other words, the \textit{true risk} of $f$ is bounded by the \textit{empirical risk} of $f$ plus the \textit{generalization error}.
-\end{theorem}
+where $\mathcal{R}_{N}$ is the empirical risk of $p$ over some dataset $\mathcal{D}$. In other words, the \textit{true risk} of $p$ is bounded by the \textit{empirical risk} of $p$ plus the \textit{generalization error}.
+\end{thm}
 
 the risk associated with our model on the distribution from which its data is sampled from is bounded by the sum of the empirical risk of the model and the model's generalization error. The proof of this theorem merely relies on the fact that the absolute value of a quantity is always at least as big as the value itself. 
 
@@ -299,14 +213,14 @@ the risk associated with our model on the distribution from which its data is sa
 Reordering terms,
 
 \begin{align*}
-\mathcal{R}(f) - \mathcal{R}_{N}(f) &\le |\mathcal{R}(f) - \mathcal{R}_{N}(f)| \\
+\mathcal{R}(p) - \mathcal{R}_{N}(p) &\le |\mathcal{R}(p) - \mathcal{R}_{N}(p)| \\
 a &\le |a|\\
 \end{align*}
 
 which is true so thus the theorem holds.
 \end{proof}
 
-In general, the risk of the learned model depends on the \textit{representation} of models available to the \textit{optimization} algorithm and is bounded by how well the learned model \textit{generalizes}. In the equation for $\hat{f}$, \textit{representation} corresponds to ``$f \in \mathcal{F}$'' since $\mathcal{F}$ is the set of models we are optimizing over and hoping represents the data. \textit{Optimization} corresponds to $\min$ since $\min$ optimizes the objective loss/risk function. Finally, \textit{generalization} corresponds to $|\mathcal{R}(f) - \mathcal{R}_N(f)|$ since this term computes the difference between the true performance of $f$ (including on out-of-sample data points) and the empirical risk over $\mathcal{D}$.
+In general, the risk of the learned model depends on the \textit{representation} of models available to the \textit{optimization} algorithm and is bounded by how well the learned model \textit{generalizes}. In the equation for $\hat{p}$, \textit{representation} corresponds to ``$p \in \mathcal{P}$'' since $\mathcal{P}$ is the set of models we are optimizing over and hoping represents the data. \textit{Optimization} corresponds to $\min$ since $\min$ optimizes the objective loss/risk function. Finally, \textit{generalization} corresponds to $|\mathcal{R}(p) - \mathcal{R}_N(p)|$ since this term computes the difference between the true performance of $p$ (including on out-of-sample data points) and the empirical risk over $\mathcal{D}$.
 
 \section{Least Squares Regression (LSR)}
 
@@ -357,50 +271,21 @@ $$\hat{\theta} = (X^TX)^{\dag}X^TY = (\sum_{i=1}^{n} x_i x_x^T)^{\dag} \sum_{i=1
 The pseudoinverse has the nice property of producing the min-norm $\hat{\theta}$\footnote{Since the system is underspecified, there are infinitely many $\hat{\theta}$'s that achieve the minimum risk.}. This can be shown using Lagrange multipliers or projections among other methods. In the case of a fully specified system (i.e. $X^TX$ is invertible) then the pseudoinverse is the inverse and $\hat{\theta}$ is still the min-norm solution since there is only one solution.
 
 Thus, we have derived the empirical risk minimizer for this least squares problem. 
-Recall the fundamental theorem of machine learning.
-What is the population risk?
-
-Under a \textit{fixed design} generative model, the features describing the setup are fixed and like any other linear model:
-\begin{theorem}
+We now consider the population risk. 
+To do so, we start with a 
+\textit{fixed design} generative model, the features describing the setup are fixed and the labels are determined by:
 \begin{align*} 
 y_{i} = \theta_{*}^{T}x_{i} + v_{i}
 \end{align*}
-\end{theorem}
-$v_{i}$ is also i.i.d with a mean of $0$ and variance of $\sigma^{2}$. The excess risk is given by
-\begin{theorem}
+where $v_{i}$ is i.i.d with a mean of $0$ and variance of $\sigma^{2}$. The population risk is given by
 \begin{align*} 
 R(\theta) = \frac{1}{n} \sum_{i=1}^{n}\mathop{{}\mathbb{E}}_{yi} [(x_{i})^{T}\theta - y_{i})^{2}]
 \end{align*}
-\end{theorem}
-\begin{proof} We will prove that $R(\theta) = R(\hat{\theta)} - R(\theta_{*}) = \frac{\sigma^{2}d}{n}$ \\
-Let's start with the theorem and work our way through. \\
-\begin{align*}
-\frac{1}{n}\sum_{i=1}^{N}\mathop{{}\mathbb{E}}_{yi}[(\theta^{T}x_{i} - (\theta_{*}^{T}x_{i}+v_{i}))^{2}] &= \frac{1}{n}\sum_{i=1}^{N}\mathop{{}\mathbb{E}}_{yi}[((\theta^{T} - \theta_{*}^{T})x_{i}+v_{i})^{2}] \\
-&= \frac{1}{n}\sum_{i=1}^{N}\mathop{{}\mathbb{E}}_{yi}[((\theta^{T} - \theta_{*}^{T})x_{i})^{2}-2(\theta - \theta_{*})^{T}x_{i}v_{i}+v_{i}^{2}] \\
-\end{align*}
-The terms within the middle of the expectation are independent under a fixed setting and can be reduced to $0$, simplifying it further to \\
-\begin{align*}
- \frac{1}{n}\sum_{i=1}^{N}\mathop{{}\mathbb{E}}_{yi}[(\theta^{T}x_{i} - (\theta_{*}^{T}x_{i}+v_{i}))^{2}] = \frac{1}{n}\sum_{i=1}^{N}\mathop{{}\mathbb{E}}_{yi}[((\theta^{T} - \theta_{*}^{T})x_{i})^{2}+\sigma^{2}] 
-\end{align*}
-Knowing that 
-\begin{align*}
-    \theta = (x^{T}x)^{-1}x^{T}y = (x^{T}x)^{-1}x^{T}(x\theta_{*}+v)
-\end{align*}
-The left side of the expectation can be reduced as follows:
-\begin{align*}
-\mathop{{}\mathbb{E}}||x(\theta-\theta_{*})||_{2}^{2} &=\mathop{{}\mathbb{E}}||x[(x^{T}x)^{-1}x^{T}(x\theta_{*}+v)-\theta_{*}]||_{2}^{2} \\
-&=\mathop{{}\mathbb{E}}||x(x^{T}x)^{-1}x^{T}v||_{2}^{2}
-\end{align*}
-Substituting this back we can further proceed
-\begin{align*}
-\frac{1}{n}\mathop{{}\mathbb{E}}[v^{T}x(x^{T}x)^{-1}x^{T}x(x^{T}x)^{-1}x^{T}v] &= \frac{1}{n}\mathop{{}\mathbb{E}}[v^{T}x(x^{T}x)^{-1}x^{T}v] \\ 
-&= \frac{1}{n}\mathop{{}\mathbb{E}}[v^{T}Pv] \\
-&= \frac{1}{n}tr(p)\mathop{{}\mathbb{E}}[vv^{T}] \\ 
-&= \frac{\sigma^{2}}{n}tr(p) \\
-&= \frac{\sigma^{2}d}{n}
-\end{align*}
-\end{proof}
-This intuitively makes sense as the more random the noise, the more the excess risk will be blown up. The more dimensions needed will also increase the excess risk displayed as it's more information to gather. Increasing the number of samples will also lower the excess risk to zero as you see a large number of more samples, your understanding of the true distribution will approach the optimal. 
+Due to the random noise on the labels $y_i$, even the optimal $\theta_\star$ does not have zero risk.
+We will consider the excess risk, defined as $R(\theta) - R(\theta_{*})$
+In the exercises, you will prove that the fixed design excess risk of the least squares estimate $\hat \theta$ is given by $\frac{\sigma^2 d}{n}$.
+
+This intuitively makes sense as the higher variance the random the noise, the larger the risk. The more dimensions needed will also increase the excess risk displayed as it's more information to gather. Increasing the number of samples will also lower the excess risk to zero as you see a large number of more samples, your understanding of the true distribution will approach the optimal. 
 
 
 
