@@ -32,7 +32,7 @@ def get_kuairec_data(data_dir=DATA_DIR):
     return small_matrix, item_daily_feat, user_features
 
 
-def extract_features_labels(small_matrix, item_daily_feat, user_features):
+def extract_features_labels_groups(small_matrix, item_daily_feat, user_features, group_num):
     # Joining user and item features
     merged_user_matrix = small_matrix.merge(
         user_features, how='left', on='user_id')
@@ -41,13 +41,26 @@ def extract_features_labels(small_matrix, item_daily_feat, user_features):
 
     # Cleaning and subsampling
     merged_matrix.dropna(inplace=True)
+
+    # EDIT: subset by group
+    if group_num == 1:
+        merged_matrix = merged_matrix[(merged_matrix['is_live_streamer'] > 0) | (merged_matrix['is_video_author'] > 0)]
+    elif group_num == 2:
+        merged_matrix = merged_matrix[(merged_matrix['is_live_streamer'] == 0) | (merged_matrix['is_video_author'] == 0)]
+    elif group_num == 3:
+        merged_matrix = merged_matrix[merged_matrix['video_duration_x'] > 13005]
+    elif group_num == 4:
+        merged_matrix = merged_matrix[merged_matrix['video_duration_x'] <= 13005]
+
+    print(group_num, len(merged_matrix))
+
     subsampled_matrix = merged_matrix.sample(n=10000, random_state=0)
     label_name = ['watch_ratio']  # target
     features_name = [
         'like_cnt', 'comment_cnt',  # about video, remove music_id
         'play_cnt', 'video_duration_x',           # EDIT: added video feats
         'follow_user_num_x', 'friend_user_num',  # about user
-        'is_video_author',  # EDIT: added user feats
+        'onehot_feat0', 'onehot_feat1', 'onehot_feat2', 'onehot_feat3', 'onehot_feat4'  # EDIT: added user feats
     ]
     data_matrix = subsampled_matrix[label_name + features_name]
 
@@ -96,15 +109,11 @@ def evaluate(X_eval, y_eval, model, loss_fn):
     return loss.item()
 
 
-def group_metrics():
-    pass
-
-
 # Loading data
 small_matrix, item_daily_feat, user_features = get_kuairec_data()
 # Merging and extracting features and lavels
-label_name, features_name, data_matrix = extract_features_labels(
-    small_matrix, item_daily_feat, user_features)
+label_name, features_name, data_matrix = extract_features_labels_groups(
+    small_matrix, item_daily_feat, user_features, 1)
 print('LOADING DATA DONE')
 
 # splitting into test and evaluation
@@ -159,3 +168,10 @@ print('testing loss', test_loss)
 # normalize + add features training loss 0.09736843152442684 testing loss 0.08497483248963952
 # remove music_id training loss 0.09652752599628554 testing loss 0.08422849921329123
 # MLP training loss 0.09758633375167847 testing loss 0.08541905134916306
+
+# produces content 253512 training loss 0.08773595094680786 testing loss 0.08449804037809372
+    # with onehot training loss 0.0912407785654068 testing loss 0.0876886323094368
+# does not produce 2138674 training loss 0.1006687581539154 testing loss 0.1057567298412323
+    # with onehot 2138674 training loss 0.10038013011217117 testing loss 0.10542500764131546
+# below avg video dur 355063 training loss 0.048338521271944046 testing loss 0.04873631149530411
+# above avg video dur 1785164 training loss 0.0827745869755745 testing loss 0.07607518136501312
