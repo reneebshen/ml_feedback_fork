@@ -52,7 +52,7 @@ def extract_features_labels_groups(small_matrix, item_daily_feat, user_features,
     elif group_num == 4:
         merged_matrix = merged_matrix[merged_matrix['video_duration_x'] <= 13005]
 
-    print(group_num, len(merged_matrix))
+    print('GROUP: ', group_num)
 
     subsampled_matrix = merged_matrix.sample(n=10000, random_state=0)
     label_name = ['watch_ratio']  # target
@@ -102,10 +102,22 @@ def train(X_train, y_train, model, optimizer, loss_fn):
     return loss.item()
 
 
-def evaluate(X_eval, y_eval, model, loss_fn):
+def evaluate(X_eval, y_eval, model, loss_fn, classify):
     model.eval()
     pred = model(X_eval)
     loss = loss_fn(pred, y_eval)
+    if classify:
+        bin_pred = (pred.detach().numpy() > np.log(1 + 0.5)).flatten()
+        bin_label = (y_eval.detach().numpy() > np.log(1 + 0.5)).flatten()
+        total = bin_pred.size
+        acc = np.sum(bin_pred == bin_label) / total
+        pr = np.sum(bin_pred) / total
+        fpr = np.sum(bin_pred[bin_label == 0]) / bin_pred[bin_label == 0].size
+        fnr = 1 - (np.sum(bin_pred[bin_label == 1]) / bin_pred[bin_label == 1].size)
+        ppv = np.sum(bin_label[bin_pred == 1]) / bin_label[bin_pred == 1].size
+        npv = 1 - (np.sum(bin_label[bin_pred == 0]) / bin_label[bin_pred == 0].size)
+        return acc, pr, fpr, fnr, ppv, npv
+
     return loss.item()
 
 
@@ -113,7 +125,7 @@ def evaluate(X_eval, y_eval, model, loss_fn):
 small_matrix, item_daily_feat, user_features = get_kuairec_data()
 # Merging and extracting features and lavels
 label_name, features_name, data_matrix = extract_features_labels_groups(
-    small_matrix, item_daily_feat, user_features, 1)
+    small_matrix, item_daily_feat, user_features, 4)
 print('LOADING DATA DONE')
 
 # splitting into test and evaluation
@@ -122,41 +134,50 @@ y_train = np.log(1+np.array(data_matrix[:9000][label_name]))
 X_train = np.array(data_matrix[:9000][features_name])
 # EDIT: calling preprocess features
 X_train = preprocess_features(X_train)
-X_train, y_train = to_torch(X_train), to_torch(y_train)
+# X_train, y_train = to_torch(X_train), to_torch(y_train)
 
 y_eval = np.log(1+np.array(data_matrix[9000:][label_name]))
 X_eval = np.array(data_matrix[9000:][features_name])
 X_eval = preprocess_features(X_eval)
-X_eval, y_eval = to_torch(X_eval), to_torch(y_eval)
+# X_eval, y_eval = to_torch(X_eval), to_torch(y_eval)
 
 # EDIT: init model, assoc components
-h = 128
-model = MLP(X_train.shape[1], y_train.shape[1], h)
-loss_fn = nn.MSELoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+# h = 128
+# model = MLP(X_train.shape[1], y_train.shape[1], h)
+# loss_fn = nn.MSELoss()
+# optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-epochs = 300
+# epochs = 100
 
-for e in range(epochs):
+# for e in range(epochs):
 
     # training a linear predictor
-    train_loss = train(X_train, y_train, model, optimizer, loss_fn)
-# lam = 0  # regularization
-# d = X_train.shape[1]
-# theta_hat = np.linalg.inv(X_train.T @ X_train + lam *
-#                           np.eye(d)) @ X_train.T @ y_train
-# y_pred = X_train @ theta_hat
-# train_loss = np.mean((y_pred-y_train)**2)
+    # train_loss = train(X_train, y_train, model, optimizer, loss_fn)
+lam = 0  # regularization
+d = X_train.shape[1]
+theta_hat = np.linalg.inv(X_train.T @ X_train + lam *
+                          np.eye(d)) @ X_train.T @ y_train
+y_pred = X_train @ theta_hat
+train_loss = np.mean((y_pred-y_train)**2)
 # print('training loss', train_loss)
 
 # evaluating the linear predictor
-    test_loss = evaluate(X_eval, y_eval, model, loss_fn)
+    # test_loss = evaluate(X_eval, y_eval, model, loss_fn, True)
 
-# y_pred = X_eval @ theta_hat
-# test_loss = np.mean((y_pred-y_eval)**2)
+y_pred = X_eval @ theta_hat
+test_loss = np.mean((y_pred-y_eval)**2)
 # print('testing loss', test_loss)
-print('training loss', train_loss)
-print('testing loss', test_loss)
+
+bin_pred = (y_pred > np.log(1 + 0.5)).flatten()
+bin_label = (y_eval > np.log(1 + 0.5)).flatten()
+total = bin_pred.size
+acc = np.sum(bin_pred == bin_label) / total
+pr = np.sum(bin_pred) / total
+fpr = np.sum(bin_pred[bin_label == 0]) / bin_pred[bin_label == 0].size
+fnr = 1 - (np.sum(bin_pred[bin_label == 1]) / bin_pred[bin_label == 1].size)
+ppv = np.sum(bin_label[bin_pred == 1]) / bin_label[bin_pred == 1].size
+npv = 1 - (np.sum(bin_label[bin_pred == 0]) / bin_label[bin_pred == 0].size)
+print(acc, pr, fpr, fnr, ppv, npv)
 
 # plt.plot(y_eval, y_pred, '.')
 # plt.xlabel('actual log-watch ratio')
